@@ -19,11 +19,12 @@ published: false
 ---
 
 > **Prompting is temporary. Structure is permanent.**
->
-> — [X (Twitter) の投稿より](https://x.com/i/status/2029836408232497678)
+
+https://x.com/i/status/2029836408232497678
 
 この構成はこちらのXのポストにインスパイアされています。あまりにも管理する情報やステークホルダーが多岐に渡りすぎて危機感を覚え、どうにか人間にもAIにも事故なく分かりやすい形で情報を一元管理したいと思っており、コンテキストエンジニアリングを念頭に構造化していた時でした。
 > If you want Claude Code to feel like a senior engineer living inside your repo, your project needs structure.
+
 これを体現したいと思いました。
 
 ---
@@ -93,6 +94,8 @@ Harness Engineering   (2026〜)      "How should it run?"
 > **Agent = Model + Harness**
 
 モデルはエンジン、ハーネスはそれを覆う車体。プロンプトもコンテキストもハーネスの中の一要素にすぎない、というのが現在の定説です（[OpenAI: Harness engineering](https://openai.com/index/harness-engineering/)）。
+
+https://openai.com/index/harness-engineering/
 
 そしてハーネスの設計で最も基本的なレイヤーが **「コンテキスト境界管理」** ＝ AI が見る情報を構造化して整理することです。SSOT（Single Source of Truth、唯一の信頼できる情報源）はこのレイヤーの実装パターンになります。
 
@@ -407,4 +410,3 @@ AI時代のプロジェクトマネジメントにおいて肝となるのは「
 - [2025 Was Agents. 2026 Is Agent Harnesses. — Aakash Gupta (2026/1)](https://aakashgupta.medium.com/2025-was-agents-2026-is-agent-harnesses-heres-why-that-changes-everything-073e9877655e)
 - [What Is Harness Engineering? The Next Evolution Beyond Prompt and Context Engineering — MindStudio (2026/4)](https://www.mindstudio.ai/blog/what-is-harness-engineering-beyond-prompt-context-engineering)
 - [【AI最前線】Agentを本番環境で安定させる「Harness Engineering」とは？— Qiita (2026/4)](https://qiita.com/engchina/items/a219e4d1dd3447eff1b3)
-- Anthropic Claude Code Skills 公式ドキュメント（※公式 URL に差し替え）
