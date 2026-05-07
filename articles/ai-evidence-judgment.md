@@ -107,52 +107,50 @@ flowchart LR
 
 そのため、基本的には高めの申告レベルだけをチェック対象にしつつ、低めの申告でも証左フォルダや具体的なメモがある場合は判定できるようにしました。
 
-簡略化すると、対象項目の選定とAI判定呼び出しはこのような形です。
+簡略化して擬似コードにすると、対象項目の選定とAI判定呼び出しはこのような形です。
 
-```javascript
-const MIN_CHECK_LEVEL = 3;
+```text
+MIN_CHECK_LEVEL = 3
 
-async function checkItem({ item, declaredLevel, memo, evidenceFolder }) {
-  const meaningfulMemo = hasMeaningfulMemo(memo);
+function checkItem(item, declaredLevel, memo, evidenceFolder):
+  meaningfulMemo = removePreviousAiJudgment(memo).hasContent()
 
-  if (declaredLevel < MIN_CHECK_LEVEL) {
-    if (!evidenceFolder && !meaningfulMemo) {
-      return null;
-    }
-  }
+  if declaredLevel < MIN_CHECK_LEVEL:
+    if evidenceFolder is missing and meaningfulMemo is false:
+      return skip
 
-  if (!evidenceFolder && !meaningfulMemo) {
-    return {
-      badge: "×",
-      comment: "申告内容を裏付ける証左が見つかりません。",
-      evidenceFiles: [],
-    };
-  }
+  if evidenceFolder is missing and meaningfulMemo is false:
+    return judgment(
+      badge = "×",
+      comment = "申告内容を裏付ける証左が見つかりません",
+      evidenceFiles = []
+    )
 
-  const folderEvidence = evidenceFolder
-    ? await extractEvidence(evidenceFolder.id)
-    : { files: [], texts: [], images: [] };
+  if evidenceFolder exists:
+    folderEvidence = extractEvidenceFromFolder(evidenceFolder)
+  else:
+    folderEvidence = emptyEvidence
 
-  const linkedEvidence = meaningfulMemo
-    ? await fetchLinkedEvidence(memo, evidenceFolder?.id)
-    : { texts: [], images: [] };
+  if meaningfulMemo:
+    linkedEvidence = fetchEvidenceFromLinksInMemo(memo)
+  else:
+    linkedEvidence = emptyEvidence
 
-  const judgment = await judgeEvidence({
-    item,
-    declaredLevel,
-    memo,
-    files: folderEvidence.files,
-    texts: [...folderEvidence.texts, ...linkedEvidence.texts],
-    images: [...folderEvidence.images, ...linkedEvidence.images],
-  });
+  judgment = askAiToJudge(
+    item = item,
+    declaredLevel = declaredLevel,
+    memo = memo,
+    files = folderEvidence.files,
+    texts = folderEvidence.texts + linkedEvidence.texts,
+    images = folderEvidence.images + linkedEvidence.images
+  )
 
-  return {
-    badge: judgment.badge,
-    comment: judgment.comment,
-    evidenceFiles: folderEvidence.files.map((file) => file.name),
-    checkedAt: new Date().toISOString(),
-  };
-}
+  return judgmentResult(
+    badge = judgment.badge,
+    comment = judgment.comment,
+    evidenceFiles = namesOf(folderEvidence.files),
+    checkedAt = currentTime()
+  )
 ```
 
 ここで気をつけたのは、「証左フォルダがない = 即NG」にしないことです。
@@ -192,57 +190,45 @@ AI判定の肝はプロンプトです。
 
 ここでは、自由に推論させるのではなく、評価項目ごとのレベル定義と判定ルールを毎回明示します。
 
-実際のプロンプトはもっと長いですが、骨子はこのような形です。
+実際のプロンプトはもっと長いですが、構造を擬似的に書くとこのような形です。
 
-```javascript
-function buildJudgmentPrompt({
-  item,
-  declaredLevel,
-  memo,
-  files,
-  texts,
-  imageCount,
-}) {
-  return `
-あなたは社内AI活用度評価の一次チェック担当です。
-証左の内容を評価指標の定義と照合し、申告レベルの妥当性を判定してください。
+```text
+Prompt:
+  Role:
+    あなたは社内AI活用度評価の一次チェック担当です。
+    証左の内容を評価指標の定義と照合し、申告レベルの妥当性を判定してください。
 
-## 評価項目
-- ID: ${item.id}
-- 項目名: ${item.name}
-- 説明: ${item.description}
+  Evaluation item:
+    - ID
+    - 項目名
+    - 項目説明
 
-## レベル定義
-${item.levels.map((level, index) => `Lv${index + 1}: ${level}`).join("\n")}
+  Level definitions:
+    - Lv1 の定義
+    - Lv2 の定義
+    - Lv3 の定義
+    - Lv4 の定義
+    - Lv5 の定義
 
-## 申告内容
-- 申告レベル: Lv${declaredLevel}
-- 申告メモ: ${memo || "なし"}
+  Declaration:
+    - 申告レベル
+    - 申告メモ
 
-## 証左ファイル
-${files.length > 0 ? files.map((file) => `- ${file.name}`).join("\n") : "なし"}
+  Evidence:
+    - 証左ファイル一覧
+    - 抽出済みテキスト
+    - 添付画像の有無と枚数
 
-## 抽出済みテキスト
-${texts.map((text) => `--- ${text.name} ---\n${text.content}`).join("\n\n")}
+  Judgment rules:
+    1. 申告レベルの定義と証左の内容を照合する
+    2. 判定は「◎」「○」「△」「×」の4段階にする
+    3. ファイルが0件でも、申告メモに具体的な証左があれば評価対象にする
+    4. 証左が申告レベルを上回っている場合は「◎」にする
 
-## 画像
-${imageCount > 0 ? `${imageCount}枚の画像を添付しています。画像内容も証左として評価してください。` : "なし"}
-
-## 判定ルール
-1. 申告レベルの定義と証左の内容を照合する
-2. 判定は「◎」「○」「△」「×」の4段階にする
-3. ファイルが0件でも、申告メモに具体的な証左があれば評価対象にする
-4. 証左が申告レベルを上回っている場合は「◎」にする
-
-## 出力形式
-JSONのみを出力してください。
-
-{
-  "badge": "◎ or ○ or △ or ×",
-  "comment": "判定理由を1-3文で簡潔に書く"
-}
-`;
-}
+  Output:
+    JSONのみを返す
+    badge: "◎" or "○" or "△" or "×"
+    comment: 判定理由を1-3文で簡潔に書く
 ```
 
 特に効いたのは、判定ルールの4つ目です。
@@ -257,41 +243,32 @@ LLMの出力は、運用に載せるなら構造化して扱いたいです。
 
 そのため、パーサー側では「読めないものは `△` に倒す」方針にしました。
 
-```javascript
-function parseJudgmentResponse(text) {
-  const jsonMatch =
-    text.match(/```json\s*([\s\S]*?)```/) ||
-    text.match(/(\{[\s\S]*\})/);
+```text
+function parseJudgmentResponse(responseText):
+  json = extractJsonObject(responseText)
 
-  if (!jsonMatch) {
-    return {
-      badge: "△",
-      comment: "AI応答の解析に失敗したため、人間による確認が必要です。",
-    };
-  }
+  if json is not found:
+    return judgment(
+      badge = "△",
+      comment = "AI応答を解析できないため、人間による確認が必要"
+    )
 
-  try {
-    const parsed = JSON.parse(jsonMatch[1].trim());
-    const validBadges = ["◎", "○", "△", "×"];
+  if json cannot be parsed:
+    return judgment(
+      badge = "△",
+      comment = "JSONを解析できないため、人間による確認が必要"
+    )
 
-    if (!validBadges.includes(parsed.badge)) {
-      return {
-        badge: "△",
-        comment: "不正な判定値が返されたため、人間による確認が必要です。",
-      };
-    }
+  if json.badge is not one of ["◎", "○", "△", "×"]:
+    return judgment(
+      badge = "△",
+      comment = "不正な判定値のため、人間による確認が必要"
+    )
 
-    return {
-      badge: parsed.badge,
-      comment: parsed.comment || "",
-    };
-  } catch {
-    return {
-      badge: "△",
-      comment: "JSONの解析に失敗したため、人間による確認が必要です。",
-    };
-  }
-}
+  return judgment(
+    badge = json.badge,
+    comment = json.comment
+  )
 ```
 
 ここで `×` にしないのがポイントです。
