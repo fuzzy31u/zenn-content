@@ -235,7 +235,48 @@ Prompt:
 
 **証左が申告レベルを大きく上回っている場合、これは「不整合」ではなく「十分以上に裏付けられている」状態です。** このルールを書かないと、申告レベルと証左レベルがぴったり一致しないことを悪く見てしまう可能性があります。
 
-## 4. 出力はJSONに固定し、失敗時は人間確認へ倒す
+## 4. LLM API呼び出しは薄いアダプタに閉じ込める
+
+LLM APIを呼ぶ部分は、できるだけ薄いアダプタとして切り出しました。
+
+ここでやることはシンプルです。モデルID、最大出力トークン数、テキストプロンプト、画像を受け取り、LLMに問い合わせて、返ってきたテキストを後続のパーサーに渡します。
+
+擬似コードにすると、この程度の責務です。
+
+```text
+function askAiToJudge(prompt, images, options):
+  model = options.model or defaultMultimodalModel
+
+  request = createLlmRequest(
+    model = model,
+    maxOutputTokens = options.maxOutputTokens,
+    contents = [
+      text(prompt),
+      each image in images as imageContent
+    ]
+  )
+
+  response = callLlmApi(request)
+
+  if api call failed:
+    return rawJudgmentResponse(
+      status = "failed",
+      text = errorMessage
+    )
+
+  return rawJudgmentResponse(
+    status = "ok",
+    text = response.text
+  )
+```
+
+ポイントは、**プロバイダー固有のAPI仕様を判定ロジックに混ぜないこと**です。
+
+証左抽出、プロンプト構築、LLM呼び出し、レスポンス解析を分けておくと、モデルを差し替えたい場合や、タイムアウト・レート制限・リトライを調整したい場合に影響範囲を小さくできます。
+
+また、マルチモーダル判定ではテキストだけでなく画像も渡すため、アダプタの入力は最初から `prompt + images` の形にしています。これにより、PDFページ画像、スライド内画像、動画キーフレームを同じ扱いでLLMへ渡せます。
+
+## 5. 出力はJSONに固定し、失敗時は人間確認へ倒す
 
 LLMの出力は、運用に載せるなら構造化して扱いたいです。
 
