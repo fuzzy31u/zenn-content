@@ -1,0 +1,4 @@
+interface:
+  display_name: "Zenn Preview QA"
+  short_description: "Preview and hotfix Zenn articles locally"
+  default_prompt: "Use $zenn-preview-qa to preview this Zenn article locally, inspect rendering issues, and hotfix the Markdown."
