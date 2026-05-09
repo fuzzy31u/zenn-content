@@ -9,6 +9,19 @@
     "new:book": "zenn new:book"
   },
   "dependencies": {
-    "zenn-cli": "^0.1.158"
-  }
+    "zenn-cli": "^0.1.162"
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fuzzy31u/zenn-content.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/fuzzy31u/zenn-content/issues"
+  },
+  "homepage": "https://github.com/fuzzy31u/zenn-content#readme"
 }
