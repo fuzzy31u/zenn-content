@@ -3,7 +3,7 @@ title: "プロンプトを書く前に、リポジトリを『AIが働きやす�
 emoji: "🧭"
 type: "tech"
 topics: ["ai", "claudecode", "ssot", "harness", "projectmanagement"]
-published: false
+published: true
 ---
 
 # TL;DR
